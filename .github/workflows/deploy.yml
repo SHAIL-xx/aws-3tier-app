@@ -9,9 +9,18 @@ jobs:
   terraform:
     name: "Terraform Apply"
     runs-on: ubuntu-latest
+    
     defaults:
       run:
         working-directory: ./terraform
+
+    env:
+      AWS_ACCESS_KEY_ID: "test"
+      AWS_SECRET_ACCESS_KEY: "test"
+      AWS_DEFAULT_REGION: "us-east-1"
+      AWS_REGION: "us-east-1"
+      AWS_ENDPOINT_URL: "http://localhost:4566"
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -19,12 +28,18 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
-      - name: Configure Mock AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID || 'test' }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY || 'test' }}
-          aws-region: us-east-1
+      - name: Start LocalStack (Community)
+        run: |
+          docker run -d -p 4566:4566 \
+            -e SERVICES=ec2,vpc,rds,iam,sts,s3 \
+            -e DEFAULT_REGION=us-east-1 \
+            --name localstack localstack/localstack:3.4.0
+          
+          echo "Waiting for LocalStack to boot..."
+          until curl -s http://localhost:4566/_localstack/health | grep -q "\"services\":"; do
+            sleep 2
+          done
+          echo "LocalStack is ready!"
 
       - name: Terraform Init
         run: terraform init
