@@ -3,7 +3,8 @@ terraform {
   required_providers {
     aws = {
       source  = "hashicorp/aws"
-      version = "~> 5.0"
+      # Pin to a version before DescribeAddressesAttribute was added
+      version = "5.30.0"
     }
   }
 }
